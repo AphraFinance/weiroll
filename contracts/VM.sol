@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
 import {Auth, Authority} from "solmate/auth/Auth.sol";
@@ -120,10 +119,8 @@ contract VM is Auth {
 
         for (uint256 i = 0; i < commands.length; i++) {
             command = commands[i];
-            address target = address(uint160(uint256(command)));
-            bytes4 selector = bytes4(command);
             //check the calling contract(via delegate) against the command address and the function selector
-            if( authority.canCall(address(this), target, selector) == false ) revert CmdNoAuth(target, selector);
+            if( authority.canCall(address(this), address(uint160(uint256(command))), bytes4(command)) == false ) revert CmdNoAuth(address(uint160(uint256(command))), bytes4(command));
 
             flags = uint8(bytes1(command << 32));
 
@@ -134,31 +131,31 @@ contract VM is Auth {
             }
 
             if (flags & FLAG_CT_MASK == FLAG_CT_DELEGATECALL) {
-                (success, outdata) = target // target
+                (success, outdata) = address(uint160(uint256(command))) // target
                 .delegatecall(
                 // inputs
                     state.buildInputs(
-                    //selector
-                        selector,
+                        //selector
+                        bytes4(command),
                         indices
                     )
                 );
             } else if (flags & FLAG_CT_MASK == FLAG_CT_CALL) {
-                (success, outdata) = target.call(// target
-                // inputs
+                (success, outdata) = address(uint160(uint256(command))).call( // target
+                    // inputs
                     state.buildInputs(
-                    //selector
-                        selector,
+                        //selector
+                        bytes4(command),
                         indices
                     )
                 );
             } else if (flags & FLAG_CT_MASK == FLAG_CT_STATICCALL) {
-                (success, outdata) = target // target
+                (success, outdata) = address(uint160(uint256(command))) // target
                 .staticcall(
                 // inputs
                     state.buildInputs(
-                    //selector
-                        selector,
+                        //selector
+                        bytes4(command),
                         indices
                     )
                 );
@@ -168,13 +165,13 @@ contract VM is Auth {
                 assembly {
                     mstore(calleth, add(v, 0x20))
                 }
-                (success, outdata) = target.call{// target
-                value : calleth
+                (success, outdata) = address(uint160(uint256(command))).call{ // target
+                    value: calleth
                 }(
                 // inputs
                     state.buildInputs(
-                    //selector
-                        selector,
+                        //selector
+                        bytes4(command),
                         bytes32(uint256(indices << 8) | IDX_END_OF_ARGS)
                     )
                 );
